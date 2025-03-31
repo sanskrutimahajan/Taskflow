@@ -1,20 +1,18 @@
-// routes/messagesRoutes.ts
-import { Request, Response, Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../middlewares/asyncHandler';
 
 const router = Router();
 
+// In-memory store for messages
 interface Message {
   id: string;
   content: string;
   senderId: string;
-  taskId?: string;
-  createdAt: Date;
+  timestamp: Date;
 }
-
 let messages: Message[] = [];
 
-// GET /messages
+// GET /messages - List all messages
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
@@ -22,7 +20,7 @@ router.get(
   })
 );
 
-// GET /messages/:id
+// GET /messages/:id - Get a specific message by ID
 router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
@@ -34,24 +32,26 @@ router.get(
   })
 );
 
-// POST /messages
+// POST /messages - Create a new message
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const { content, senderId, taskId } = req.body;
+    const { content, senderId } = req.body;
+    if (!content || !senderId) {
+      return res.status(400).json({ message: 'Content and senderId are required' });
+    }
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
       senderId,
-      taskId,
-      createdAt: new Date(),
+      timestamp: new Date()
     };
     messages.push(newMessage);
     res.status(201).json(newMessage);
   })
 );
 
-// PUT /messages/:id
+// PUT /messages/:id - Update a message
 router.put(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
@@ -64,7 +64,7 @@ router.put(
   })
 );
 
-// DELETE /messages/:id
+// DELETE /messages/:id - Delete a message
 router.delete(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
@@ -74,16 +74,6 @@ router.delete(
     }
     messages.splice(index, 1);
     res.json({ message: 'Message deleted' });
-  })
-);
-
-// GET /messages/task/:taskId – messages linked to a specific task
-router.get(
-  '/task/:taskId',
-  asyncHandler(async (req: Request, res: Response) => {
-    const taskId = req.params.taskId;
-    const taskMessages = messages.filter(m => m.taskId === taskId);
-    res.json(taskMessages);
   })
 );
 

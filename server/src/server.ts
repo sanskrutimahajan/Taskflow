@@ -1,7 +1,11 @@
-// src/server.ts
+// server/src/server.ts
 import express from 'express';
+import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+
 import authRoutes from './routes/auth';
 import userRoutes from './routes/user';
 import projectRoutes from './routes/projects';
@@ -13,6 +17,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5005;
 
+app.use(cors());
 app.use(bodyParser.json());
 
 // Mount routes
@@ -28,11 +33,26 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
-// Start the server only if not in test environment
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}
+// Create HTTP server and attach Socket.IO
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: { origin: '*' } // Allow all origins for development; restrict in production
+});
 
-export default app;
+// Socket.IO connection event
+io.on('connection', (socket) => {
+  console.log('New client connected: ', socket.id);
+
+  // Optionally, handle disconnection
+  socket.on('disconnect', () => {
+    console.log('Client disconnected: ', socket.id);
+  });
+});
+
+// Export io for use in routes if needed
+export { io };
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
